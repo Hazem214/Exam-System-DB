@@ -1,0 +1,467 @@
+
+---------------------------------------------------------------------------create DataBase------------------------------------------------------------------------------------
+
+create database ExamSystem
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------
+---------------------FileGrouping--------------------
+Alter Database ExamSystem
+Add Filegroup FG_test
+
+-----------------------------------
+
+Alter Database ExamSystem
+Add file
+(
+	Name = test1,
+	FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\DATA\ExamSystem.ndf',
+	SIZE = 5MB,
+	MAXSIZE = 30MB,
+	FILEGROWTH = 5%
+)
+TO FileGroup FG_test;
+
+----------------------------------------------------------------------------create Table----------------------------------------------------------------------------------------
+
+create table Instructor
+(
+
+	 Instructor_id int primary key,
+	 F_name nvarchar(20),
+	 L_name nvarchar(20),
+	 E_mail nvarchar(20) ,
+	 Ins_adress nvarchar(20),
+	 Phone nvarchar(20),
+	 Maneger_id int 
+	 
+	 constraint mng_fk foreign key (Maneger_id) references  Instructor (Instructor_id)
+
+
+
+)
+
+create table Courses
+(
+
+	 Course_id int primary key,
+	 Course_name nvarchar(20),
+	 L_name nvarchar(20),
+	 Min_degree int,
+	 max_degree int,
+	 Instructor_id int,
+	 constraint ins_fk foreign key (Instructor_id) references  Instructor (Instructor_id)
+
+
+)
+
+create table Exam
+(
+
+	 Exam_id int primary key,
+	 Exam_name nvarchar(20) ,
+	 Exam_type nvarchar(20),
+	 Intake nvarchar(20),
+	 Track nvarchar(20),
+	 Start_time time ,
+	 end_time time ,
+	 total_time int ,
+	 mor_option nvarchar(20),
+	 Instructor_id int,
+	 constraint ins_exam_fk foreign key (Instructor_id) references  Instructor (Instructor_id)
+
+)
+
+create table Student
+(
+
+	 Student_id int primary key,
+	 F_name nvarchar(20),
+	 L_name nvarchar(20),
+	 E_mail nvarchar(20) ,
+	 Std_adress nvarchar(20),
+	 Phone nvarchar(20),
+	 Intake nvarchar(20),
+	 Track nvarchar(20),
+
+
+
+
+
+)
+create table Student
+(
+
+	 Student_id int primary key,
+	 F_name nvarchar(20),
+	 L_name nvarchar(20),
+	 E_mail nvarchar(20) ,
+	 Std_adress nvarchar(20),
+	 Phone nvarchar(20),
+	 Intake nvarchar(20),
+	 Track nvarchar(20),
+
+
+
+
+
+)
+
+create table Question_Exam
+(
+
+	 Question_id int primary key,
+	 Question_descrip nvarchar(20),
+	 Answer nvarchar(20),
+	 Degree nvarchar(20) ,
+	 Course_id int,
+	 Exam_id int,
+	 constraint ques_course_fk foreign key (Course_id) references  Courses (Course_id),
+	 constraint ques_exam_fk foreign key (Exam_id) references  Exam (Exam_id)
+
+
+
+)
+
+create table Question_Choice
+(
+
+	 Question_id int primary key,
+	 Question_descrip nvarchar(20),
+	 Option1 nvarchar(50),
+	 Option2 nvarchar(50),
+	 Option3 nvarchar(50),
+	 Option4 nvarchar(50),
+	 Answer nvarchar(20),
+	 Course_id int,
+	 constraint queschois_course_fk foreign key (Course_id) references  Courses (Course_id)
+
+
+
+
+)
+
+create table Question_TorF
+(
+
+	 Question_id int primary key,
+	 Question_descrip nvarchar(20),
+	 Option1 nvarchar(50),
+	 Option2 nvarchar(50),
+	 Answer nvarchar(20),
+	 Course_id int,
+	 constraint quesctorf_course_fk foreign key (Course_id) references  Courses (Course_id)
+
+
+
+
+)
+
+create table Question_Text
+(
+
+	 Question_id int primary key,
+	 Question_descrip nvarchar(20),
+	 Answer nvarchar(20),
+	 Course_id int,
+	 constraint quesctext_course_fk foreign key (Course_id) references  Courses (Course_id)
+
+
+
+
+)
+
+-----------------------------------------------------------------inset and constraints-----------------------------------------------
+
+
+------------------(table  Courses)---------
+ALTER TABLE Courses
+ADD CONSTRAINT def_Min_degree
+DEFAULT 50 FOR Min_degree;
+-----------------------------
+ALTER TABLE Courses
+ADD CONSTRAINT def_Max_degree
+DEFAULT 100 FOR max_degree;
+--------------------------------
+------------------(table  Instructor)---------
+ALTER TABLE Instructor 
+ADD CONSTRAINT chk_email 
+check(E_mail LIKE '%_@__%.__%');
+-------------------------------
+ALTER TABLE Instructor 
+ADD CONSTRAINT chk_phone_unq 
+Unique(Phone);
+-------------------------------
+ALTER TABLE Instructor 
+ADD constraint Chk_Phone
+check (Phone not like '%[^0-9]%' and Phone like '01[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]%');
+------------------(table  Student)---------
+ALTER TABLE Student 
+add constraint Chk_stu_Phone
+check (Phone not like '%[^0-9]%' and Phone like '01[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]%');
+--------------------------------
+ALTER TABLE Student 
+ADD CONSTRAINT chk_stu_email 
+check(E_mail LIKE '%_@__%.__%');
+---------------------------------
+ALTER TABLE Student 
+ADD CONSTRAINT df_intake 
+DEFAULT '15' FOR Intake;
+------------------(table  Exam)---------
+ALTER TABLE Exam 
+ADD CONSTRAINT df_exam_intake 
+DEFAULT '15' FOR Intake;
+------------------(table  Question_Exam)---------
+ALTER TABLE Question_Exam 
+ADD CONSTRAINT df_Degree
+DEFAULT '10' FOR Degree;
+
+--(1)----------------------------------------------------------------------(insert)-------(Instructor)-------
+
+insert into Instructor values(1,'hazem','mohamed','hazem@gmail.com','beba',1,'benisuef','01279228491');
+
+insert into Instructor values(2,'Alaa','Agami','agami@gmail.com','elwasta',NULL,'benisuef','01015019483');
+
+insert into Instructor values(3,'hossam','mtarawy','mtarawy@gmail.com','nasser',NULL,'minia','01279228491');
+
+insert into Instructor values(4,'ali','ahmed','ali@gmail.com','minia',NULL,'minia','01279338491');
+
+--(2)----------------------------------------------------------------------(insert)-------(Courses)-------
+
+insert into Courses values(1,'html',50,100,1);
+
+insert into Courses values(2,'css',50,100,1);
+
+insert into Courses values(3,'c#',50,100,2);
+
+insert into Courses values(4,'sql',50,100,3);
+
+insert into Courses values(5,'bootstrap',50,100,4);
+
+insert into Courses values(6,'javascript',50,100,4);
+
+--(3)----------------------------------------------------------------------(insert)-------(Student)-------
+
+insert into Student values(3,'mohamed','monir','monir@gmail.com','lab lab',Default,'.net','01211726125');
+
+insert into Student values(4,'ali','ahmed','ali@gmail.com','lab lab',Default,'mern','01210726125');
+
+insert into Student values(5,'khaled','maged','maged@gmail.com','lab lab',Default,'social','01212726125');
+
+insert into Student values(6,'mai','ahmed','ahmed@gmail.com','lab lab',Default,'front','01213726125');
+
+insert into Student values(7,'salama','yasser','yasser@gmail.com','lab lab',Default,'embedded','01214726125');
+
+insert into Student values(8,'lobna','yasser','lobna@gmail.com','lab lab',Default,'embedded','01214727125');
+
+insert into Student values(9,'maha','yasser','maha@gmail.com','lab lab',Default,'front','01214728825');
+
+insert into Student values(10,'wael','galal','galal@gmail.com','lab lab',Default,'.net','01214724425');
+
+
+--(4)----------------------------------------------------------------------(insert)-------(Exam)-------
+
+
+insert into Exam values(2,'html','text',Default,'.net','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',1,1);
+
+insert into Exam values(3,'css','text',Default,'front','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',1,2);
+
+insert into Exam values(4,'css','TorF',Default,'.net','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',1,2);
+
+insert into Exam values(5,'c#','text',Default,'.net','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',2,3);
+
+insert into Exam values(6,'c#','choice',Default,'.net','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',2,3);
+
+insert into Exam values(7,'sql','choice',Default,'embedded','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',3,4);
+
+insert into Exam values(8,'sql','TorF',Default,'.net','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',3,4);
+
+insert into Exam values(9,'bootstrap','choice',Default,'front','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',4,5);
+
+insert into Exam values(10,'bootstrap','text',Default,'.net','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',4,5);
+
+insert into Exam values(11,'javascript','TorF',Default,'mern','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',4,6);
+
+insert into Exam values(12,'javascript','choice',Default,'.net','19:23:33.0000000','20:22:33.0000000',1,'dsdfw',4,6);
+
+
+--(5)----------------------------------------------------------------------(insert)-------(Question_exam)-------
+
+----(1)-------------------------(HTML Exam)-------------------------------------
+
+insert into Question_Exam values(2,'what is html','markup language','10',1,1);
+
+insert into Question_Exam values(3,'what is div','block element','10',1,1);
+
+----(2)-------------------------(HTML Exam)-------------------------------------
+insert into Question_Exam values(4,'what is span','inline element','10',1,2);
+
+insert into Question_Exam values(5,'what is <p>','paragraph','10',1,2);
+
+insert into Question_Exam values(6,' what is <h>','horizontal row','10',1,2);
+
+----(3)-------------------------(CSS Exam)-------------------------------------
+insert into Question_Exam values(7,'what is css','styling',Default,2,3);
+
+insert into Question_Exam values(8,'what is flex box','displaying',Default,2,3);
+
+insert into Question_Exam values(9,'how to remove a Line','style none',Default,2,3);
+
+
+----(4)-------------------------(CSS Exam)-------------------------------------
+insert into Question_Exam values(10,'css is prog lang','false',Default,2,4);
+
+insert into Question_Exam values(11,'CSS use TO Styling','true',Default,2,4);
+
+insert into Question_Exam values(12,'css has color only','false',Default,2,4);
+
+
+----(5)-------------------------(C# Exam)-------------------------------------
+insert into Question_Exam values(13,'C# is ','general-purpose',Default,3,5);
+
+insert into Question_Exam values(14,'C# use fo ','desktop apps',Default,3,5);
+
+insert into Question_Exam values(15,'C# is ','oop',Default,3,5);
+
+
+----(6)-------------------------(C# Exam)-------------------------------------
+insert into Question_Exam values(16,'C# is ','general-purpose',Default,3,6);
+
+insert into Question_Exam values(17,'C# use with ','mobile apps',Default,3,6);
+
+insert into Question_Exam values(18,'C# inroll in ','gamming',Default,3,6);
+
+
+----(7)-------------------------(SQL Exam)-------------------------------------
+insert into Question_Exam values(19,'SQL used for','database',Default,4,7);
+
+insert into Question_Exam values(20,'SQL work in','backend',Default,4,7);
+
+insert into Question_Exam values(21,'SQL is','relational database',Default,4,7);
+
+
+----(8)-------------------------(SQL Exam)-------------------------------------
+insert into Question_Exam values(22,'SQL is prog lang ','false',Default,4,8);
+
+insert into Question_Exam values(23,' SQL use for db','true',Default,4,8);
+
+insert into Question_Exam values(24,'SQL is oop','false',Default,4,8);
+
+
+----(9)-------------------------(Bootstrap Exam)-------------------------------------
+insert into Question_Exam values(25,'bootstrap is  ','css framwork',Default,5,9);
+
+insert into Question_Exam values(26,' bootstrap use for','styling',Default,5,9);
+
+insert into Question_Exam values(27,'bootstrap consist of','multi_classes',Default,5,9);
+
+
+
+----(10)-------------------------(Bootstrap Exam)-------------------------------------
+insert into Question_Exam values(28,'bootstrap is  ','css framwork',Default,5,10);
+
+insert into Question_Exam values(29,' bootstrap use for','styling',Default,5,10);
+
+insert into Question_Exam values(30,'bootstrap consist of','multi_classes',Default,5,10);
+
+
+
+----(11)-------------------------(Javascript Exam)-------------------------------------
+insert into Question_Exam values(31,'JS is markup lang','false',Default,6,11);
+
+insert into Question_Exam values(32,' JS use for styling','false',Default,6,11);
+
+insert into Question_Exam values(33,'JS use oop','true',Default,6,11);
+
+
+----(12)-------------------------(Javascript Exam)-------------------------------------
+insert into Question_Exam values(34,'JS is in','full stack',Default,6,12);
+
+insert into Question_Exam values(35,' JS use for ','web',Default,6,12);
+
+insert into Question_Exam values(36,'JS use ','oop consipt',Default,6,12);
+
+
+--(6)----------------------------------------------------------------------(insert)-------(Student_courses)-------
+
+
+insert into Student_courses values(1,1,90);
+insert into Student_courses values(2,1,80);
+insert into Student_courses values(3,1,100);
+insert into Student_courses values(6,1,65);
+insert into Student_courses values(9,1,85);
+insert into Student_courses values(10,1,95);
+
+insert into Student_courses values(1,2,90);
+insert into Student_courses values(2,2,80);
+insert into Student_courses values(3,2,100);
+insert into Student_courses values(6,2,65);
+insert into Student_courses values(9,2,85);
+insert into Student_courses values(10,2,95);
+
+insert into Student_courses values(1,3,90);
+insert into Student_courses values(2,3,80);
+insert into Student_courses values(3,3,70);
+insert into Student_courses values(10,3,100);
+
+insert into Student_courses values(1,4,90);
+insert into Student_courses values(2,4,80);
+insert into Student_courses values(3,4,70);
+insert into Student_courses values(10,4,100);
+
+insert into Student_courses values(1,5,90);
+insert into Student_courses values(2,5,80);
+insert into Student_courses values(3,5,70);
+insert into Student_courses values(4,5,70);
+insert into Student_courses values(6,5,70);
+insert into Student_courses values(9,5,70);
+insert into Student_courses values(10,5,100);
+
+insert into Student_courses values(1,6,90);
+insert into Student_courses values(2,6,80);
+insert into Student_courses values(3,6,70);
+insert into Student_courses values(4,6,70);
+insert into Student_courses values(6,6,70);
+insert into Student_courses values(9,6,70);
+insert into Student_courses values(10,6,100);
+
+
+--(7)----------------------------------------------------------------------(insert)-------(Student_structor)-------
+
+insert into Student_structor values(1,1);
+insert into Student_structor values(2,1);
+insert into Student_structor values(3,1);
+insert into Student_structor values(6,1);
+insert into Student_structor values(9,1);
+insert into Student_structor values(10,1);
+
+--(8)-----------------------------------------------------------------------(insert)--------(Student_Exam)-------
+
+
+select * from Student_Exam;
+
+--(9)-----------------------------------------------------------------------(insert)--------(Student_Answer)-------
+
+
+select * from Student_Answer;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,940 @@
+---------------------------------------------------------------------  1:- instructor detrmine the date of exame------------------------------------------------
+
+create View vExam as select * from Exam
+
+create proc setDateOfExam @start datetime , @end datetime, @nameExam nvarchar(max)
+as 
+begin
+	
+	declare @idexam int =(select Exam_id from Exam where Exam_name= @nameExam)
+
+	update vExam 
+	set Start_time=@start ,end_time=@end
+	where Exam_id=@idexam
+
+end
+
+exec  setDateOfExam '1.1.2233 00:00:00','1.1.1800 00:00:00', 'java'
+
+select * from vExam where Exam_name='java'
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+-----------------------------  2:- istructor determine student to enter the exam and student should be in table of student and table of exam_student----------------------------------------------------------------------------------
+
+create view vStudent_exam as select * from Student_Exam
+
+alter proc determineStudent @startOfStudent int ,@endOfStudent int ,@exm_name nvarchar(max)
+as 
+begin
+	--select F_name ,L_name  from student_name ,Student_Exam where student_name.Student_id=Student_Exam.Student_id and student_name.Student_id between @startOfStudent and @endOfStudent  
+	declare @exam_id int =( select Exam_id from Exam where Exam_name=@exm_name) 
+	declare @conut int = @startOfStudent
+
+	while @conut<=@endOfStudent 
+	begin
+		insert into vStudent_exam(Student_id,Exam_id,degree)
+		values (@conut,@exam_id,0)
+		set @conut=@conut+1
+	end
+
+
+
+end 
+
+exec determineStudent 1,5,'html'
+
+select * from vStudent_exam
+
+delete from vStudent_exam
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------- 3:- allow insturctor to choice question from question text and put it in exam-----------------------------
+
+create proc addquestion_from_textquestion_proc  @qusexam_id int ,@patren nvarchar 
+as 
+begin 
+	
+		declare @x nvarchar(max)=(	select Question_descrip  from Question_Text where Question_descrip like '['+@patren +']%')
+
+		update Question_Exam 
+		set Question_descrip=@x
+		where Question_id=@qusexam_id
+
+
+end
+
+exec addquestion_from_textquestion_proc 3,'how' 
+
+select * from Question_Exam
+ 
+ drop proc addquestion_from_textquestion_proc
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------
+
+ ----------------------------------------------------------  4:- senario to exam from student number 1 with check his answer ---------------------------------------------------
+
+-- first  view for question
+
+create view exam1 as select Question_descrip from Question_Exam where Exam_id=1
+
+-- proc fro show question
+
+create proc show_question 
+as 
+begin
+
+
+select * from exam1 
+
+end
+
+-- show question
+
+exec show_question
+
+ -- proc to allow student to enter his answer
+
+alter proc student_ans_true_or_false @answer nvarchar(max) ,@qiestion_id int
+as 
+begin
+	insert into Student_Answer values(@qiestion_id,1,@answer)
+	--update Student_Answer set Student_Answer=@answer where Student_id =1 and Question_id=@qiestion_id
+
+	declare @true_answer nvarchar(max)=(select Answer from Question_Exam where Question_id=@qiestion_id)
+
+	declare @student_answer nvarchar(max)=(select Student_Answer from Student_Answer where Question_id=@qiestion_id and Student_id=1)
+
+	declare @grade int =(select degree   from Student_Exam where Student_id=1 and Exam_id=1)
+	
+	declare @adddegree int
+
+	if(@true_answer=@student_answer)
+		begin
+		
+		set @adddegree=(select Degree  from Question_Exam where Question_id=@qiestion_id)
+			
+			update Student_Exam
+			set degree=(@grade+@adddegree)
+			where Student_id=1 and Exam_id=1
+
+		end
+	else
+	begin
+		print 'from esle'
+	end
+
+
+end
+--student answer
+exec student_ans_true_or_false "true",1
+exec student_ans_true_or_false "true",2
+exec student_ans_true_or_false "false",3
+exec student_ans_true_or_false "true",4
+
+select * from Student_Answer
+delete from Student_Answer
+-- function to show  grade of student
+
+create function show_grade (@name nvarchar(max))
+returns int
+begin
+	
+	declare @std_id int =(select Student_id from Student where F_name =@name)
+
+	declare @degree int =(select degree from Student_Exam where Student_id=@std_id)
+
+	return @degree
+
+end
+
+--show student grade
+
+select dbo.show_grade('ahmed')
+
+--delete from Student_Answer
+
+----------this code about determine time of exam to allow student to show question --------------
+
+
+
+
+alter proc show_question_withTime 
+as 
+begin
+	
+	declare @starttime datetime=(select Start_time from Exam where Exam_id=1)
+	declare @endtime datetime=(select end_time from Exam where Exam_id=1)
+
+
+
+	if(@starttime >=GETDATE() AND @endtime <=getdate() )
+	begin
+		SELECT Question_descrip FROM exam1 
+end
+	else 
+	begin
+
+	print 'you are not in day of exam'
+	end
+
+
+
+
+end
+
+exec show_question_withTime
+
+
+select GETDATE()
+
+
+
+
+----------------------------------------------------------------------------end of senairo-----------------------------------------------------------------------------------------------------
+
+
+
+------------------------------------------------------------------------instructor chose exam for his course only------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+alter proc choseExamForinstructor  @qusexam_id int ,@patren nvarchar ,@instruct_name nvarchar(max) ,@degree int
+as 
+begin 
+
+		declare @max int=(select sum(cast( Degree as int)) from Question_Exam where Exam_id=1)
+		
+		if((@max+@degree)>100)
+		begin
+			print'you overload max degree'
+		end
+		else
+			begin
+					-- insert degree of question
+						update Question_Exam set Degree=@degree where Question_id =@qusexam_id
+						-- check if instructro do this course
+					declare @insid int =(select Instructor_id  from Instructor where F_name=@instruct_name) --return id of instructor
+					declare @coursename nvarchar(max)=(select Course_name from Courses where Instructor_id=@insid)--return course name for this constructor
+
+					declare @examid int=(select Exam_id from Question_Exam where Question_id=@qusexam_id) --return id of exam that conatin question 
+					declare @courseid int= (select Course_id from Exam where Exam_id=@examid)            --return id of cours
+					declare @courename2 nvarchar(max)=(select Course_name from Courses where Course_id=@courseid)-- return name of courses
+	
+
+					if(@coursename=@courename2)
+						begin
+
+							declare @x nvarchar(max)=(	select Question_descrip  from Question_Text where Question_descrip like '['+@patren +']%')
+							update Question_Exam 
+							set Question_descrip=@x
+							where Question_id=@qusexam_id
+
+
+						end
+
+					else
+						begin
+
+							print 'this is not your course to but queston'
+
+						end
+
+			end
+
+				
+
+end
+
+exec choseExamForinstructor 3 ,'how','hazem' ,20
+
+
+
+-------------------------------------------------------------------allow maneger to add new  student---------------------------------------------------
+
+create procedure manager_add_new_user 
+      @Student_id int, 
+	  @F_name nvarchar(max),
+      @L_name nvarchar(max),
+      @E_mail nvarchar(max),
+      @Std_adress nvarchar(max),
+      @Intake nvarchar(max),
+	  @Track nvarchar(max),
+	  @Phone nvarchar(max),
+	  @pass_word int,
+	  @branch nvarchar(max)
+	   
+as 
+begin 
+		insert into Student values(@Student_id ,@F_name,@L_name,
+		@E_mail,@Std_adress,@Intake,@Track,@Phone,@pass_word,@branch)
+end
+
+exec manager_add_new_user 11,'ahmed','matrewy','O.matrewy@gmail.com','Minia',17,'Mobile APP','01019069277' ,123456,'minia'
+
+
+
+select *
+from Student
+
+
+-------------------------------------------------------------------- maneger update student --------------------------------------------------------------
+
+create procedure manager_update_user_data
+@Student_id int ,@Intake nvarchar(20), @Track nvarchar(20) , @branch nvarchar(20)
+as 
+begin 
+		update Student 
+		set Intake=@Intake, Track=@Track ,branch=@branch
+		where Student_id=@Student_id
+end
+
+exec manager_update_user_data 13,'19', 'web development' ,'cairo'
+
+select *
+from [dbo].[Student]
+
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------------Trigger --------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------insert trigger---------------------------------------------------------------------------------
+
+--------------------------------------------------------------------trigger in table Student courses to prevent insert and allow only to  to maneger and instructro-----------------------
+
+
+alter trigger tig 
+on Student_courses
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+insert into Student_courses values(5,1,99)
+
+
+drop trigger tig
+
+select SUSER_SNAME()
+
+--------------------------------------------------------------------trigger on table instructor to prevent insert and allow only to  to maneger -------------------------------------
+
+
+create trigger instructor_trigger 
+on Instructor
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+drop trigger instructor_trigger
+
+select SUSER_SNAME()
+
+--------------------------------------------------------------------trigger on table student to prevent insert and allow only to  to maneger and instructor -----------------------
+
+
+create trigger student_trigger 
+on Student
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger'  or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+drop trigger student_trigger
+
+select SUSER_SNAME()
+
+
+
+--------------------------------------------------------------------trigger on table student answer to prevent insert and allow only to  to maneger and instructor -----------------------
+
+
+create trigger student_answer_trigger 
+on Student_Answer
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger'  or @system='instructor' or @system='student')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+drop trigger student_answer_trigger
+
+select SUSER_SNAME()
+
+
+
+------------------------------------------------------------------------trigger--------------------------------------------------------------------
+create trigger tig_Courses 
+on Courses
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+----------------------------------------------------------------------trigger--------------------------------------------------------------------
+create trigger tig_Exam 
+on Exam
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+
+----------------------------------------------------------------------trigger--------------------------------------------------------------------
+create trigger tig_Question_Exam 
+on Question_Exam
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+------------------------------------------------------------------------trigger--------------------------------------------------------------------
+create trigger tig_Question_Choice 
+on Question_Choice
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+----------------------------------------------------------------------trigger--------------------------------------------------------------------
+create trigger tig_Question_Text
+on Question_Text
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+-----------------------------------------------------------------------trigger--------------------------------------------------------------------
+
+create trigger tig_Question_TorF
+on Question_TorF
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+-----------------------------------------------------------------------trigger--------------------------------------------------------------------
+
+create trigger tig_Student_Exam
+on Student_Exam
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end  
+
+-----------------------------------------------------------------------trigger--------------------------------------------------------------------
+
+
+
+
+create trigger tig_Student_structor
+on Student_structor
+after insert
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end  
+
+------------------------------------------------------------------------------------update trigger----------------------------------------------------------------------------------
+
+--------------------------------------------------------------------trigger on table student_course to prevent update and allow only to  to maneger and instructro-------------------------
+
+
+create trigger trigupdate 
+on Student_courses
+after update
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+update Student_courses set Degree=66 where Student_id=2 and Course_id=2
+
+
+
+drop trigger tig
+
+select SUSER_SNAME()
+
+
+
+
+
+
+--------------------------------------------------------------------trigger on table instructor to prevent update and allow only to  to maneger --------------------------------------
+
+
+create trigger instructor_update_trigger 
+on Instructor
+after update
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' )
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+drop trigger instructor_update_trigger
+
+select SUSER_SNAME()
+
+--------------------------------------------------------------------trigger on table student to prevent update and allow only to  to maneger ---------------------------------------
+-
+
+create trigger student_update_trigger 
+on Student
+after update
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger'or @system='instructor' )
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+drop trigger student_update_trigger
+
+select SUSER_SNAME()
+
+
+------------------------------------------------------------------------------------delete trigger--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------trigger on table student_course to prevent delete and allow only to  to maneger and instructro-------------------------
+
+
+create trigger student_course_trigger 
+on Student_courses
+after delete
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' or @system='instructor')
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+delete Student_courses where Student_id =10 and Course_id=6
+
+
+
+
+drop trigger student_course_trigger
+
+select SUSER_SNAME()
+
+
+--------------------------------------------------------------------trigger on table instructor to prevent delete and allow only to  to maneger -------------------------
+
+
+create trigger instructor_delete_trigger 
+on Instructor
+after delete
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger' )
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+drop trigger instructor_delete_trigger
+
+select SUSER_SNAME()
+
+--------------------------------------------------------------------trigger on table student to prevent delete and allow only to  to maneger -----------------------------------------------------
+
+
+create trigger student_delete_trigger 
+on Student
+after delete
+as
+begin
+
+		declare @system nvarchar(max)=(select SUSER_SNAME())
+
+		if(@system='DESKTOP-P2KLOL1\dell' or @system='maneger'or @system='instructor' )
+		begin
+			
+			print'done'
+		end
+		else 
+			begin
+
+			print 'not allow to you to insert data '
+			rollback
+		end
+
+
+end
+
+
+
+
+drop trigger student_delete_trigger
+
+select SUSER_SNAME()
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------- trigger to prevent insert and allow only to maneger  for question choice-------------------------------------------------------
+
+CREATE TRIGGER trg_add_mcq
+ON Question_Choice
+INSTEAD OF INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+	
+    INSERT INTO Question_Choice (Question_id, Question_descrip, Option1, Option2, Option3, Option4, Answer, Course_id)
+    select 
+        inserted.Question_id, 
+        inserted.Question_descrip, 
+        inserted.Option1,
+		inserted.Option2,
+		inserted.Option3,
+		inserted.Option4,
+		inserted.Answer,
+		inserted.Course_id from inserted
+
+	WHERE SUSER_SNAME() = 'DESKTOP-AGJTFTI\Hossam Matrewy'
+END
+
+
+DROP TRIGGER trg_add_mcq
+INSERT INTO Question_Choice VALUES(20, 'Question_descripp', 'Option1', 'Option2', 'Option3', 'Option4', 'Answer', 1)
+
+select *
+from Question_Choice
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------- trigger to prevent insert and allow only to maneger  for question choice --> anthoer road (answer) -------------------------------------------------------
+CREATE TRIGGER trg_add_mcq
+ON Question_Choice
+AFTER INSERT
+AS
+BEGIN
+		declare @i int
+		SELECT @i = inserted.Question_id
+		FROM inserted;
+		
+	DELETE FROM Question_Choice WHERE Question_id=@i
+	AND SUSER_SNAME() != 'DESKTOP-AGJTFTI\Hossam Matrewy35'
+END
+
+
+DROP TRIGGER trg_add_mcq
+INSERT INTO Question_Choice VALUES(18, 'Question_descripp', 'Option1', 'Option2', 'Option3', 'Option4', 'Answer', 1)
+
+select *
+from Question_Choice
+-------------------------------------------------- trigger to prevent delete and allow only to maneger
+CREATE TRIGGER trg_delete_mcq
+ON Question_Choice
+instead of DELETE
+AS
+BEGIN
+    	declare @i int
+		SELECT @i = deleted.Question_id
+		FROM deleted;
+		
+	DELETE FROM Question_Choice WHERE Question_id=@i
+	AND SUSER_SNAME() = 'DESKTOP-AGJTFTI\Hossam Matrewy'
+
+END
+
+
+DROP TRIGGER trg_add_mcq
+
+
+
